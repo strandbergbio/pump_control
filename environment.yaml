@@ -1,0 +1,10 @@
+name: pump_control_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pip
+  - pip:
+    - PyQt5
+  - matplotlib
+  - pyserial
