@@ -220,7 +220,7 @@ class PumpControlPanel(QGroupBox):
         # Kp
         pid_layout.addWidget(QLabel("Kp:"), 1, 0)
         self.kp_spin = QDoubleSpinBox()
-        self.kp_spin.setRange(0.0, 1000.0)
+        self.kp_spin.setRange(-1000.0, 1000.0)
         self.kp_spin.setValue(1.0)
         self.kp_spin.setDecimals(3)
         pid_layout.addWidget(self.kp_spin, 1, 1)
@@ -228,7 +228,7 @@ class PumpControlPanel(QGroupBox):
         # Ki
         pid_layout.addWidget(QLabel("Ki:"), 1, 2)
         self.ki_spin = QDoubleSpinBox()
-        self.ki_spin.setRange(0.0, 1000.0)
+        self.ki_spin.setRange(-1000.0, 1000.0)
         self.ki_spin.setValue(0.0)
         self.ki_spin.setDecimals(3)
         pid_layout.addWidget(self.ki_spin, 1, 3)
@@ -236,7 +236,7 @@ class PumpControlPanel(QGroupBox):
         # Kd
         pid_layout.addWidget(QLabel("Kd:"), 2, 0)
         self.kd_spin = QDoubleSpinBox()
-        self.kd_spin.setRange(0.0, 1000.0)
+        self.kd_spin.setRange(-1000.0, 1000.0)
         self.kd_spin.setValue(0.0)
         self.kd_spin.setDecimals(3)
         pid_layout.addWidget(self.kd_spin, 2, 1)
