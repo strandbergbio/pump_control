@@ -26,7 +26,7 @@ class PIDController:
     """PID Controller for closed-loop control."""
 
     def __init__(self, kp=1.0, ki=0.0, kd=0.0, setpoint=0.0,
-                 output_limits=None, sample_time=0.1):
+                 output_limits=None, sample_time=1.0):
         """
         Initialize PID controller.
 
@@ -123,7 +123,7 @@ class CombinedPumpSensorPlotter:
     def __init__(self, pump_port, sensor_port, diameter=DIAMETER_50_ML,
                  sensor_baud=9600, max_points=500, use_pid=False,
                  kp=1.0, ki=0.0, kd=0.0, setpoint=0.0,
-                 min_rate=0.1, max_rate=50.0, update_interval=0.5):
+                 min_rate=0.0, max_rate=1000.0, update_interval=0.5):
         """
         Initialize combined pump and sensor plotter.
 
@@ -563,12 +563,12 @@ def main():
                        help='PID derivative gain (default: 0.0)')
     parser.add_argument('--setpoint', type=float, default=0.0,
                        help='PID setpoint (target sensor value, default: 0.0)')
-    parser.add_argument('--min-rate', type=float, default=0.1,
-                       help='Minimum pump rate in mL/hr (default: 0.1)')
-    parser.add_argument('--max-rate', type=float, default=50.0,
-                       help='Maximum pump rate in mL/hr (default: 50.0)')
-    parser.add_argument('--update-interval', type=float, default=0.5,
-                       help='PID update interval in seconds (default: 0.5)')
+    parser.add_argument('--min-rate', type=float, default=0.0,
+                       help='Minimum pump rate in mL/hr (default: 0.0)')
+    parser.add_argument('--max-rate', type=float, default=1000.0,
+                       help='Maximum pump rate in mL/hr (default: 1000.0)')
+    parser.add_argument('--update-interval', type=float, default=1.0,
+                       help='PID update interval in seconds (default: 1.0)')
 
     args = parser.parse_args()
 
