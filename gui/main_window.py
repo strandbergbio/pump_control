@@ -289,8 +289,10 @@ class MainWindow(QMainWindow):
                     'Timestamp',
                     'Vacuum_Pressure',
                     'Vacuum_Flow_Rate',
+                    'Vacuum_Setpoint',
                     'Fluid_Pressure',
-                    'Fluid_Flow_Rate'
+                    'Fluid_Flow_Rate',
+                    'Fluid_Setpoint'
                 ])
                 self.csv_file.flush()
 
@@ -405,20 +407,26 @@ class MainWindow(QMainWindow):
         vacuum_rate = self.vacuum_controller.get_signed_rate() if self.vacuum_controller else 0.0
         fluid_rate = self.fluid_controller.get_signed_rate() if self.fluid_controller else 0.0
 
-        # Log to CSV
+        # Get current setpoints (None if PID not enabled)
+        vacuum_setpoint = self.vacuum_pid.setpoint if self.vacuum_pid_enabled and self.vacuum_pid else None
+        fluid_setpoint = self.fluid_pid.setpoint if self.fluid_pid_enabled and self.fluid_pid else None
+
+        # Log to CSV (empty string for None setpoints)
         if self.csv_writer:
             self.csv_writer.writerow([
                 timestamp.strftime('%Y-%m-%d %H:%M:%S.%f'),
                 vacuum_pressure,
                 vacuum_rate,
+                vacuum_setpoint if vacuum_setpoint is not None else '',
                 fluid_pressure,
-                fluid_rate
+                fluid_rate,
+                fluid_setpoint if fluid_setpoint is not None else ''
             ])
             self.csv_file.flush()
 
-        # Add to plots
-        self.plot_widget.add_vacuum_data(vacuum_pressure, vacuum_rate, timestamp)
-        self.plot_widget.add_fluid_data(fluid_pressure, fluid_rate, timestamp)
+        # Add to plots (pass setpoints for time series plotting)
+        self.plot_widget.add_vacuum_data(vacuum_pressure, vacuum_rate, timestamp, vacuum_setpoint)
+        self.plot_widget.add_fluid_data(fluid_pressure, fluid_rate, timestamp, fluid_setpoint)
 
         # Update status
         self.vacuum_status_label.setText(f"Vacuum: P={vacuum_pressure:.2f}, R={vacuum_rate:.2f}")

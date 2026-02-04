@@ -24,13 +24,15 @@ class LivePlotWidget(QWidget):
         self.vacuum_timestamps = deque(maxlen=max_points)
         self.vacuum_pressures = deque(maxlen=max_points)
         self.vacuum_rates = deque(maxlen=max_points)
-        self.vacuum_setpoint = None
+        self.vacuum_setpoints = deque(maxlen=max_points)  # Time series of setpoints (None when disabled)
+        self.vacuum_setpoint = None  # Current setpoint value
 
         # Data storage for fluid pump
         self.fluid_timestamps = deque(maxlen=max_points)
         self.fluid_pressures = deque(maxlen=max_points)
         self.fluid_rates = deque(maxlen=max_points)
-        self.fluid_setpoint = None
+        self.fluid_setpoints = deque(maxlen=max_points)  # Time series of setpoints (None when disabled)
+        self.fluid_setpoint = None  # Current setpoint value
 
         # Setup matplotlib figure
         self.figure = Figure(figsize=(12, 5))
@@ -85,21 +87,23 @@ class LivePlotWidget(QWidget):
 
         self.figure.tight_layout()
 
-    def add_vacuum_data(self, pressure, rate, timestamp=None):
+    def add_vacuum_data(self, pressure, rate, timestamp=None, setpoint=None):
         """Add a data point for the vacuum pump."""
         if timestamp is None:
             timestamp = datetime.now()
         self.vacuum_timestamps.append(timestamp)
         self.vacuum_pressures.append(pressure)
         self.vacuum_rates.append(rate)
+        self.vacuum_setpoints.append(setpoint)
 
-    def add_fluid_data(self, pressure, rate, timestamp=None):
+    def add_fluid_data(self, pressure, rate, timestamp=None, setpoint=None):
         """Add a data point for the fluid pump."""
         if timestamp is None:
             timestamp = datetime.now()
         self.fluid_timestamps.append(timestamp)
         self.fluid_pressures.append(pressure)
         self.fluid_rates.append(rate)
+        self.fluid_setpoints.append(setpoint)
 
     def set_vacuum_setpoint(self, setpoint):
         """Set the vacuum pump setpoint (None to disable)."""
@@ -108,6 +112,46 @@ class LivePlotWidget(QWidget):
     def set_fluid_setpoint(self, setpoint):
         """Set the fluid pump setpoint (None to disable)."""
         self.fluid_setpoint = setpoint
+
+    def _plot_setpoint_segments(self, ax, times, setpoints, label):
+        """Plot setpoint as connected segments, with gaps where setpoint is None.
+
+        This avoids interpolating lines across periods when pressure control was disabled.
+        """
+        if not times or not setpoints:
+            return
+
+        # Find contiguous segments where setpoint is not None
+        segments_times = []
+        segments_values = []
+        current_times = []
+        current_values = []
+        label_added = False
+
+        for t, sp in zip(times, setpoints):
+            if sp is not None:
+                current_times.append(t)
+                current_values.append(sp)
+            else:
+                # End of a segment
+                if current_times:
+                    segments_times.append(current_times)
+                    segments_values.append(current_values)
+                    current_times = []
+                    current_values = []
+
+        # Don't forget the last segment
+        if current_times:
+            segments_times.append(current_times)
+            segments_values.append(current_values)
+
+        # Plot each segment
+        for seg_times, seg_values in zip(segments_times, segments_values):
+            if label_added:
+                ax.plot(seg_times, seg_values, 'g:', linewidth=2)
+            else:
+                ax.plot(seg_times, seg_values, 'g:', linewidth=2, label=label)
+                label_added = True
 
     def update_plots(self):
         """Redraw both plots with current data."""
@@ -125,6 +169,7 @@ class LivePlotWidget(QWidget):
             times = list(self.vacuum_timestamps)
             pressures = list(self.vacuum_pressures)
             rates = list(self.vacuum_rates)
+            setpoints = list(self.vacuum_setpoints)
 
             # Pressure line (blue, left axis)
             self.ax_vacuum.plot(times, pressures, 'b-', linewidth=1.5, label='Pressure')
@@ -132,10 +177,8 @@ class LivePlotWidget(QWidget):
             # Flow rate line (red, right axis)
             self.ax_vacuum_rate.plot(times, rates, 'r-', linewidth=1.5, label='Flow Rate')
 
-            # Setpoint line (green dotted)
-            if self.vacuum_setpoint is not None:
-                self.ax_vacuum.axhline(y=self.vacuum_setpoint, color='green',
-                                       linestyle=':', linewidth=2, label=f'Setpoint ({self.vacuum_setpoint})')
+            # Setpoint line (green dotted) - plot segments where setpoint is not None
+            self._plot_setpoint_segments(self.ax_vacuum, times, setpoints, 'Setpoint')
 
             # Format x-axis
             self.ax_vacuum.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
@@ -153,6 +196,7 @@ class LivePlotWidget(QWidget):
             times = list(self.fluid_timestamps)
             pressures = list(self.fluid_pressures)
             rates = list(self.fluid_rates)
+            setpoints = list(self.fluid_setpoints)
 
             # Pressure line (blue, left axis)
             self.ax_fluid.plot(times, pressures, 'b-', linewidth=1.5, label='Pressure')
@@ -160,10 +204,8 @@ class LivePlotWidget(QWidget):
             # Flow rate line (red, right axis)
             self.ax_fluid_rate.plot(times, rates, 'r-', linewidth=1.5, label='Flow Rate')
 
-            # Setpoint line (green dotted)
-            if self.fluid_setpoint is not None:
-                self.ax_fluid.axhline(y=self.fluid_setpoint, color='green',
-                                      linestyle=':', linewidth=2, label=f'Setpoint ({self.fluid_setpoint})')
+            # Setpoint line (green dotted) - plot segments where setpoint is not None
+            self._plot_setpoint_segments(self.ax_fluid, times, setpoints, 'Setpoint')
 
             # Format x-axis
             self.ax_fluid.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
@@ -188,8 +230,10 @@ class LivePlotWidget(QWidget):
         self.vacuum_timestamps.clear()
         self.vacuum_pressures.clear()
         self.vacuum_rates.clear()
+        self.vacuum_setpoints.clear()
         self.fluid_timestamps.clear()
         self.fluid_pressures.clear()
         self.fluid_rates.clear()
+        self.fluid_setpoints.clear()
         self.vacuum_setpoint = None
         self.fluid_setpoint = None
