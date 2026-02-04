@@ -106,7 +106,7 @@ class PumpControlPanel(QGroupBox):
     stop_requested = pyqtSignal()
     syringe_changed = pyqtSignal(float)  # diameter
     pid_enabled_changed = pyqtSignal(bool)
-    pid_params_changed = pyqtSignal(float, float, float, float)  # kp, ki, kd, setpoint
+    pid_params_changed = pyqtSignal(float, float, float, float, float, float)  # kp, ki, kd, setpoint, max_rate, sample_time
     pid_reset_requested = pyqtSignal()
 
     def __init__(self, title, default_syringe='50 mL', default_units='ML/HR', default_direction='INF', parent=None):
@@ -241,14 +241,30 @@ class PumpControlPanel(QGroupBox):
         self.kd_spin.setDecimals(3)
         pid_layout.addWidget(self.kd_spin, 2, 1)
 
+        # Max Rate
+        pid_layout.addWidget(QLabel("Max Rate:"), 2, 2)
+        self.max_rate_spin = QDoubleSpinBox()
+        self.max_rate_spin.setRange(0.1, 10000.0)
+        self.max_rate_spin.setValue(1000.0)
+        self.max_rate_spin.setDecimals(1)
+        pid_layout.addWidget(self.max_rate_spin, 2, 3)
+
+        # Sample Time
+        pid_layout.addWidget(QLabel("Sample Time:"), 3, 0)
+        self.sample_time_spin = QDoubleSpinBox()
+        self.sample_time_spin.setRange(0.1, 60.0)
+        self.sample_time_spin.setValue(1.0)
+        self.sample_time_spin.setDecimals(1)
+        pid_layout.addWidget(self.sample_time_spin, 3, 1)
+
         # Apply and Reset buttons
         self.apply_btn = QPushButton("Apply")
         self.apply_btn.clicked.connect(self._on_apply_clicked)
-        pid_layout.addWidget(self.apply_btn, 2, 2)
+        pid_layout.addWidget(self.apply_btn, 3, 2)
 
         self.reset_btn = QPushButton("Reset")
         self.reset_btn.clicked.connect(self.pid_reset_requested.emit)
-        pid_layout.addWidget(self.reset_btn, 2, 3)
+        pid_layout.addWidget(self.reset_btn, 3, 3)
 
         self.stack.addWidget(pid_widget)
 
@@ -302,7 +318,9 @@ class PumpControlPanel(QGroupBox):
         ki = self.ki_spin.value()
         kd = self.kd_spin.value()
         setpoint = self.setpoint_spin.value()
-        self.pid_params_changed.emit(kp, ki, kd, setpoint)
+        max_rate = self.max_rate_spin.value()
+        sample_time = self.sample_time_spin.value()
+        self.pid_params_changed.emit(kp, ki, kd, setpoint, max_rate, sample_time)
 
     def set_connected(self, connected):
         """Update UI state based on connection status."""
@@ -322,5 +340,7 @@ class PumpControlPanel(QGroupBox):
             'kp': self.kp_spin.value(),
             'ki': self.ki_spin.value(),
             'kd': self.kd_spin.value(),
-            'setpoint': self.setpoint_spin.value()
+            'setpoint': self.setpoint_spin.value(),
+            'max_rate': self.max_rate_spin.value(),
+            'sample_time': self.sample_time_spin.value()
         }

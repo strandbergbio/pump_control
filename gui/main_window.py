@@ -325,9 +325,10 @@ class MainWindow(QMainWindow):
                 ki=vacuum_params['ki'],
                 kd=vacuum_params['kd'],
                 setpoint=vacuum_params['setpoint'],
-                output_limits=(-50.0, 50.0),
-                sample_time=0.5
+                output_limits=(-vacuum_params['max_rate'], vacuum_params['max_rate']),
+                sample_time=vacuum_params['sample_time']
             )
+            self.vacuum_max_rate = vacuum_params['max_rate']
 
             fluid_params = self.fluid_panel.get_pid_params()
             self.fluid_pid = PIDController(
@@ -335,9 +336,10 @@ class MainWindow(QMainWindow):
                 ki=fluid_params['ki'],
                 kd=fluid_params['kd'],
                 setpoint=fluid_params['setpoint'],
-                output_limits=(-50.0, 50.0),
-                sample_time=0.5
+                output_limits=(-fluid_params['max_rate'], fluid_params['max_rate']),
+                sample_time=fluid_params['sample_time']
             )
+            self.fluid_max_rate = fluid_params['max_rate']
 
             # Update UI state
             self.connected = True
@@ -448,14 +450,14 @@ class MainWindow(QMainWindow):
         # Vacuum pump PID
         if self.vacuum_pid_enabled and self.vacuum_pid and self.latest_vacuum_pressure is not None:
             output = self.vacuum_pid.update(self.latest_vacuum_pressure)
-            self._apply_pid_output(self.vacuum_controller, output)
+            self._apply_pid_output(self.vacuum_controller, output, self.vacuum_max_rate)
 
         # Fluid pump PID
         if self.fluid_pid_enabled and self.fluid_pid and self.latest_fluid_pressure is not None:
             output = self.fluid_pid.update(self.latest_fluid_pressure)
-            self._apply_pid_output(self.fluid_controller, output)
+            self._apply_pid_output(self.fluid_controller, output, self.fluid_max_rate)
 
-    def _apply_pid_output(self, controller, output):
+    def _apply_pid_output(self, controller, output, max_rate):
         """Apply PID output to a pump controller."""
         if not controller:
             return
@@ -466,7 +468,7 @@ class MainWindow(QMainWindow):
         else:
             direction = "INF" if output > 0 else "WDR"
             rate = abs(output)
-            rate = max(min_rate, min(50.0, rate))  # Clamp rate
+            rate = max(min_rate, min(max_rate, rate))  # Clamp rate
 
             if controller.current_direction != direction:
                 controller.stop_pump()
@@ -506,14 +508,17 @@ class MainWindow(QMainWindow):
             if self.vacuum_controller:
                 self.vacuum_controller.stop_pump()
 
-    @pyqtSlot(float, float, float, float)
-    def _on_vacuum_pid_params(self, kp, ki, kd, setpoint):
+    @pyqtSlot(float, float, float, float, float, float)
+    def _on_vacuum_pid_params(self, kp, ki, kd, setpoint, max_rate, sample_time):
         """Handle vacuum PID parameter change."""
         if self.vacuum_pid:
             self.vacuum_pid.kp = kp
             self.vacuum_pid.ki = ki
             self.vacuum_pid.kd = kd
             self.vacuum_pid.setpoint = setpoint
+            self.vacuum_pid.output_limits = (-max_rate, max_rate)
+            self.vacuum_pid.sample_time = sample_time
+        self.vacuum_max_rate = max_rate
         if self.vacuum_pid_enabled:
             self.plot_widget.set_vacuum_setpoint(setpoint)
 
@@ -555,14 +560,17 @@ class MainWindow(QMainWindow):
             if self.fluid_controller:
                 self.fluid_controller.stop_pump()
 
-    @pyqtSlot(float, float, float, float)
-    def _on_fluid_pid_params(self, kp, ki, kd, setpoint):
+    @pyqtSlot(float, float, float, float, float, float)
+    def _on_fluid_pid_params(self, kp, ki, kd, setpoint, max_rate, sample_time):
         """Handle fluid PID parameter change."""
         if self.fluid_pid:
             self.fluid_pid.kp = kp
             self.fluid_pid.ki = ki
             self.fluid_pid.kd = kd
             self.fluid_pid.setpoint = setpoint
+            self.fluid_pid.output_limits = (-max_rate, max_rate)
+            self.fluid_pid.sample_time = sample_time
+        self.fluid_max_rate = max_rate
         if self.fluid_pid_enabled:
             self.plot_widget.set_fluid_setpoint(setpoint)
 
