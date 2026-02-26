@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
         controls_layout.setSpacing(10)
 
         # Vacuum pump panel - defaults to withdraw direction
-        self.vacuum_panel = PumpControlPanel("Vacuum Pump", default_syringe='50 mL', default_units='ML/HR', default_direction='WDR')
+        self.vacuum_panel = PumpControlPanel("Vacuum Pump", default_syringe='50 mL', default_units='ML/HR', default_direction='WDR', default_mode='pressure')
         self.vacuum_panel.setEnabled(False)
         self.vacuum_panel.setMaximumHeight(300)
         controls_layout.addWidget(self.vacuum_panel)

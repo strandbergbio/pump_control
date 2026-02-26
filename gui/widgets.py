@@ -109,12 +109,14 @@ class PumpControlPanel(QGroupBox):
     pid_params_changed = pyqtSignal(float, float, float, float, float, float)  # kp, ki, kd, setpoint, max_rate, sample_time
     pid_reset_requested = pyqtSignal()
 
-    def __init__(self, title, default_syringe='50 mL', default_units='ML/HR', default_direction='INF', parent=None):
+    def __init__(self, title, default_syringe='50 mL', default_units='ML/HR', default_direction='INF', default_mode='flow', parent=None):
         super().__init__(title, parent)
         self.default_syringe = default_syringe
         self.default_units = default_units
         self.default_direction = default_direction
-        self._pid_mode = False
+        self.default_mode = default_mode
+        self._pid_mode = (default_mode == 'pressure')
+        self._pid_active = False
         self._setup_ui()
 
     def _setup_ui(self):
@@ -139,10 +141,14 @@ class PumpControlPanel(QGroupBox):
 
         self.flow_btn = QPushButton("Flow Control")
         self.flow_btn.setCheckable(True)
-        self.flow_btn.setChecked(True)  # Start in flow control mode
 
         self.pressure_btn = QPushButton("Pressure Control")
         self.pressure_btn.setCheckable(True)
+
+        if self.default_mode == 'pressure':
+            self.pressure_btn.setChecked(True)
+        else:
+            self.flow_btn.setChecked(True)
 
         self.mode_group = QButtonGroup()
         self.mode_group.setExclusive(True)
@@ -213,7 +219,7 @@ class PumpControlPanel(QGroupBox):
         pid_layout.addWidget(QLabel("Setpoint:"), 0, 0)
         self.setpoint_spin = QDoubleSpinBox()
         self.setpoint_spin.setRange(-10000.0, 10000.0)
-        self.setpoint_spin.setValue(0.0)
+        self.setpoint_spin.setValue(8.0)
         self.setpoint_spin.setDecimals(2)
         pid_layout.addWidget(self.setpoint_spin, 0, 1)
 
@@ -221,7 +227,7 @@ class PumpControlPanel(QGroupBox):
         pid_layout.addWidget(QLabel("Kp:"), 1, 0)
         self.kp_spin = QDoubleSpinBox()
         self.kp_spin.setRange(-1000.0, 1000.0)
-        self.kp_spin.setValue(1.0)
+        self.kp_spin.setValue(-15.0)
         self.kp_spin.setDecimals(3)
         pid_layout.addWidget(self.kp_spin, 1, 1)
 
@@ -266,12 +272,17 @@ class PumpControlPanel(QGroupBox):
         self.reset_btn.clicked.connect(self.pid_reset_requested.emit)
         pid_layout.addWidget(self.reset_btn, 3, 3)
 
+        # Start/Stop control button
+        self.pid_start_stop_btn = QPushButton("Start Control")
+        self.pid_start_stop_btn.clicked.connect(self._on_pid_start_stop_clicked)
+        pid_layout.addWidget(self.pid_start_stop_btn, 4, 0, 1, 4)
+
         self.stack.addWidget(pid_widget)
 
         layout.addWidget(self.stack)
 
-        # Start in manual mode
-        self.stack.setCurrentIndex(0)
+        # Set initial stack page based on default mode
+        self.stack.setCurrentIndex(1 if self.default_mode == 'pressure' else 0)
 
     def _update_toggle_styles(self):
         """Update button styles based on selection state."""
@@ -290,14 +301,15 @@ class PumpControlPanel(QGroupBox):
         self._pid_mode = (button == self.pressure_btn)
         self._update_toggle_styles()
 
+        # Always deactivate PID when switching modes
+        self._pid_active = False
+        self.pid_start_stop_btn.setText("Start Control")
+        self.pid_enabled_changed.emit(False)
+
         if self._pid_mode:
             self.stack.setCurrentIndex(1)
-            # Apply current PID params when switching to PID mode
-            self._on_apply_clicked()
         else:
             self.stack.setCurrentIndex(0)
-
-        self.pid_enabled_changed.emit(self._pid_mode)
 
     def _on_syringe_changed(self):
         """Handle syringe size change."""
@@ -321,6 +333,17 @@ class PumpControlPanel(QGroupBox):
         max_rate = self.max_rate_spin.value()
         sample_time = self.sample_time_spin.value()
         self.pid_params_changed.emit(kp, ki, kd, setpoint, max_rate, sample_time)
+
+    def _on_pid_start_stop_clicked(self):
+        """Toggle PID active state."""
+        self._pid_active = not self._pid_active
+        if self._pid_active:
+            self.pid_start_stop_btn.setText("Stop Control")
+            self._on_apply_clicked()  # sync params before starting
+            self.pid_enabled_changed.emit(True)
+        else:
+            self.pid_start_stop_btn.setText("Start Control")
+            self.pid_enabled_changed.emit(False)
 
     def set_connected(self, connected):
         """Update UI state based on connection status."""
