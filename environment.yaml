@@ -8,3 +8,4 @@ dependencies:
     - PyQt5
   - matplotlib
   - pyserial
+  - pyinstaller

@@ -1,3 +1,6 @@
 __pycache__/
 .DS_Store
+build/
+dist/
 logs/
+pump_sensor_gui.spec
