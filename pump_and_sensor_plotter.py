@@ -123,7 +123,7 @@ class CombinedPumpSensorPlotter:
     def __init__(self, pump_port, sensor_port, diameter=DIAMETER_50_ML,
                  sensor_baud=9600, max_points=500, use_pid=False,
                  kp=1.0, ki=0.0, kd=0.0, setpoint=0.0,
-                 min_rate=0.0, max_rate=1000.0, update_interval=0.5):
+                 min_rate=0.0, max_rate=999.9, update_interval=0.5):
         """
         Initialize combined pump and sensor plotter.
 

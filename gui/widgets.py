@@ -244,8 +244,8 @@ class PumpControlPanel(QGroupBox):
         # Max Rate
         pid_layout.addWidget(QLabel("Max Rate:"), 2, 2)
         self.max_rate_spin = QDoubleSpinBox()
-        self.max_rate_spin.setRange(0.1, 10000.0)
-        self.max_rate_spin.setValue(1000.0)
+        self.max_rate_spin.setRange(0.1, 999.9)
+        self.max_rate_spin.setValue(999.9)
         self.max_rate_spin.setDecimals(1)
         pid_layout.addWidget(self.max_rate_spin, 2, 3)
 
